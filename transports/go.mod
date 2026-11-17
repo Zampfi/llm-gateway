@@ -241,3 +241,5 @@ require (
 )
 
 replace github.com/mark3labs/mcp-go => github.com/maximhq/mcp-go v0.0.0-20261102181017-b7da3bc145a1
+
+replace github.com/maximhq/bifrost/core => ../core
