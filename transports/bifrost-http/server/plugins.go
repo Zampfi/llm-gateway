@@ -19,6 +19,7 @@ import (
 	"github.com/maximhq/bifrost/plugins/telemetry"
 	"github.com/maximhq/bifrost/transports/v2/bifrost-http/handlers"
 	"github.com/maximhq/bifrost/transports/v2/bifrost-http/lib"
+	"github.com/maximhq/bifrost/transports/v2/bifrost-http/responsecost"
 )
 
 // InferPluginTypes determines which interface types a plugin implements
@@ -203,6 +204,9 @@ func loadBuiltinPlugin(ctx context.Context, name string, pluginConfig any, bifro
 	case modelcatalogresolver.PluginName:
 		return modelcatalogresolver.Init(bifrostConfig.ModelCatalog, logger)
 
+	case responsecost.PluginName:
+		return responsecost.Init()
+
 	default:
 		return nil, fmt.Errorf("unknown built-in plugin: %s", name)
 	}
@@ -247,6 +251,17 @@ func (s *BifrostHTTPServer) getPluginConfig(name string) *schemas.PluginConfig {
 // loadBuiltinPlugins loads required built-in plugins in specific order
 func (s *BifrostHTTPServer) loadBuiltinPlugins(ctx context.Context) error {
 	builtinPlacement := schemas.Ptr(schemas.PluginPlacementBuiltin)
+
+	// 0. Response cost (Zamp fork): puts each call's cost in the reply as usage.cost, when
+	// enabled in PluginConfigs. Order 0, so its PostLLMHook runs last, on the reply the
+	// client actually gets (after compat has converted it back).
+	responseCostConfig := s.getPluginConfig(responsecost.PluginName)
+	if responseCostConfig != nil && responseCostConfig.Enabled {
+		s.registerPluginWithStatus(ctx, responsecost.PluginName, nil, nil, false)
+	} else {
+		s.markPluginDisabled(responsecost.PluginName)
+	}
+	s.Config.SetPluginOrderInfo(responsecost.PluginName, builtinPlacement, schemas.Ptr(0))
 
 	// 1. Telemetry (always first - tracks everything).
 	// Default-on: absent PluginConfig entry is treated as enabled, matching pre-#3269 behavior
