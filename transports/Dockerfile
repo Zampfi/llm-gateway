@@ -27,6 +27,9 @@
   # Set environment for CGO-enabled build (required for go-sqlite3)
   ENV CGO_ENABLED=1 GOOS=linux
 
+  # The fork's own core: transports/go.mod replaces the published module with ../core,
+  # so core patches ship in the image.
+  COPY core/ /core/
   COPY transports/go.mod transports/go.sum ./
   RUN ls
   RUN cat go.mod
