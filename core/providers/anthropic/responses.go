@@ -5584,7 +5584,9 @@ func (response *AnthropicMessageResponse) ToBifrostResponsesResponse(ctx *schema
 				ContentBlocks: response.Content,
 			},
 		}
-		outputMessages := ConvertAnthropicMessagesToBifrostMessages(ctx, []AnthropicMessage{tempMsg}, nil, true, false)
+		// Keep each thinking block where Claude put it, as the request side does (#7768):
+		// a reply replayed with its thinking moved to the front is rejected (#9156).
+		outputMessages := convertAnthropicMessagesToBifrostMessages(ctx, []AnthropicMessage{tempMsg}, nil, true, false, schemas.IsAnthropicModel(response.Model))
 		if len(outputMessages) > 0 {
 			// Lift the response-level code-execution container onto every
 			// code_interpreter_call so it round-trips (id is neutral; expiry is carried).
